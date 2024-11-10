@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output, display
 import numpy as np
 import csv
-from datetime import datetime
+from matplotlib.animation import FuncAnimation, PillowWriter
 
 def print_par(index, pop):
     for name, param in pop[index].network.named_parameters():
@@ -81,8 +81,57 @@ def save_score_data(formatted_time, net_data):
     print('Data saved in ' + 'Results/Generation_scores_' + formatted_time + '.csv')
 
 
+def update_plots_save(frame, Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax2, ax3):
+    ax1.cla()
+    ax2.cla()
+    ax3.cla()
 
+    mean_sim = Mean_sim[:frame + 1]
+    min_sim = Min_sim[:frame + 1]
+    scores = scores_sim[frame]
 
+    fig.suptitle(f'Generation {frame + 1}/{N_gens}', fontsize=16)
+
+    ax1.plot(mean_sim, marker='.')
+    ax1.set_xlabel('Generation')
+    ax1.set_ylabel('Mean Score')
+    ax1.set_title('Mean Simulation Trend: ' + str(round(mean_sim[-1], 9)))
+
+    if len(mean_sim) >= 2:
+        mean_legend_text = f'Prev: {mean_sim[-2]}\nLast: {mean_sim[-1]}'
+    elif len(mean_sim) == 1:
+        mean_legend_text = f'Prev: N/A\nLast: {mean_sim[-1]}'
+    else:
+        mean_legend_text = 'No data'
+    ax1.legend([mean_legend_text], loc='upper right')
+
+    ax2.plot(min_sim, marker='.', color='red')
+    ax2.set_xlabel('Generation')
+    ax2.set_ylabel('Min Score')
+    ax2.set_title('Min Simulation Trend: ' + str(round(min_sim[-1], 9)))
+
+    if len(min_sim) >= 2:
+        min_legend_text = f'Prev: {min_sim[-2]}\nLast: {min_sim[-1]}'
+    elif len(min_sim) == 1:
+        min_legend_text = f'Prev: N/A\nLast: {min_sim[-1]}'
+    else:
+        min_legend_text = 'No data'
+    ax2.legend([min_legend_text], loc='upper right')
+
+    ax3.hist(scores, bins=10, color='skyblue', edgecolor='black')
+    ax3.set_xlabel('Score')
+    ax3.set_ylabel('Frequency')
+    ax3.set_title('Score Distribution in Current Generation')
+    mean_score = np.mean(scores)
+    ax3.axvline(mean_score, color='orange', linestyle='dashed', linewidth=1.5, label=f'Mean: {round(mean_score, 2)}')
+    ax3.legend(loc='upper right')
+
+def create_animation(Mean_sim, Min_sim, scores_sim, N_gens, filename='simulation_animation.gif', fps=10):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+    anim = FuncAnimation(fig, update_plots_save, frames=N_gens, fargs=(Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax2, ax3), repeat=False)
+    anim.save(filename, writer=PillowWriter(fps=fps))
+    plt.close(fig)
+    return anim
 
 
 
