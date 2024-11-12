@@ -4,6 +4,7 @@ from IPython.display import clear_output, display
 import numpy as np
 import csv
 from matplotlib.animation import FuncAnimation, PillowWriter
+from scipy.interpolate import interp1d
 
 def print_par(index, pop):
     for name, param in pop[index].network.named_parameters():
@@ -55,9 +56,14 @@ def update_plots(Mean_sim, Min_sim, scores):
 
 
 
-def save_parameters(formatted_time, net_data):
+def save_parameters(formatted_time, net_data, pars):
     with open('Results/Population_parameters_' + formatted_time + '.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
+
+        writer.writerow(['Parameter', 'Value'])
+        for key, value in pars.items():
+            writer.writerow([key, value])
+
         writer.writerow(['Generation', 'Individual', 'Genome', 'Score'])
 
         for gen_index, net_pop in enumerate(net_data):
@@ -68,9 +74,13 @@ def save_parameters(formatted_time, net_data):
     print('Data saved in ' + 'Results/Population_parameters_' + formatted_time + '.csv')
 
 
-def save_score_data(formatted_time, net_data):
+def save_score_data(formatted_time, net_data,pars):
     with open('Results/Generation_scores_' + formatted_time + '.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
+
+        writer.writerow(['Parameter', 'Value'])
+        for key, value in pars.items():
+            writer.writerow([key, value])
         writer.writerow(['Gen', 'Mean Score', 'Min Score'])
 
         for gen_index, net_pop in enumerate(net_data):
@@ -133,7 +143,11 @@ def create_animation(Mean_sim, Min_sim, scores_sim, N_gens, filename='simulation
     plt.close(fig)
     return anim
 
-
+#Function to pass from DNA to activation function
+def act_func_generator(DNA,dom_min,dom_max):
+    x_dom=np.linspace(dom_min,dom_max,len(DNA))
+    function=interp1d(x_dom,DNA,kind='cubic', fill_value="extrapolate")
+    return function
 
 #------------------------------OTHERS------------------------------
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
