@@ -57,7 +57,7 @@ def update_plots(Mean_sim, Min_sim, scores):
 
 
 def save_parameters(formatted_time, net_data, pars):
-    with open('Results/Population_parameters_' + formatted_time + '.csv', mode='w', newline='') as file:
+    with open('Results/' + formatted_time + '_Population_parameters.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
 
         writer.writerow(['Parameter', 'Value'])
@@ -71,11 +71,11 @@ def save_parameters(formatted_time, net_data, pars):
             for ind_index, ind in enumerate(net_pop):
                 writer.writerow([gen_index, ind_index, ind.genome, ind.score])
 
-    print('Data saved in ' + 'Results/Population_parameters_' + formatted_time + '.csv')
+    print('Data saved in ' + 'Results/' + formatted_time + '_Population_parameters.csv')
 
 
 def save_score_data(formatted_time, net_data,pars):
-    with open('Results/Generation_scores_' + formatted_time + '.csv', mode='w', newline='') as file:
+    with open('Results/' + formatted_time + '_Generation_scores.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
 
         writer.writerow(['Parameter', 'Value'])
@@ -88,7 +88,7 @@ def save_score_data(formatted_time, net_data,pars):
             min_score = round(min(net_pop, key=lambda x: x.score).score, 9)
             writer.writerow([gen_index, mean_score, min_score])
 
-    print('Data saved in ' + 'Results/Generation_scores_' + formatted_time + '.csv')
+    print('Data saved in ' + 'Results/' + formatted_time + '_Generation_scores.csv')
 
 
 def update_plots_save(frame, Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax2, ax3):
