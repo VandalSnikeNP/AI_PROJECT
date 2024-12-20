@@ -83,7 +83,7 @@ class Individual(object):
             dna = np.random.randint(level_inf, level_sup, dna_length)
         return dna
 
-    def training(self, lr, epochs, X, Y, patience=5):
+    def training(self, lr, epochs, X, Y, patience=5, early_stopping=True):
         mse_loss = nn.MSELoss()
         optimizer = optim.Adam(self.network.parameters(), lr)
 
@@ -100,18 +100,35 @@ class Individual(object):
             loss.backward()
             optimizer.step()
 
-            if loss.item() < best_loss:
-                best_loss = loss.item()
-                epochs_no_improve = 0
-            else:
-                epochs_no_improve += 1
+            if early_stopping == True:
+                if loss.item() < best_loss:
+                    best_loss = loss.item()
+                    epochs_no_improve = 0
+                else:
+                    epochs_no_improve += 1
 
-            if epochs_no_improve >= patience:
-                # print(f"Early stopping at epoch {epoch} due to no improvement.")
-                break
+                if epochs_no_improve >= patience:
+                    # print(f"Early stopping at epoch {epoch} due to no improvement.")
+                    break
 
         self.score = loss_values_custom[-1]
         self.trained_pars_W = self.network.parameters()
+
+    def validate(self, dataloader, device):
+        self.network.eval()
+        true_preds, num_preds = 0., 0.
+        with torch.no_grad():
+            for inputs, targets in dataloader:
+                inputs, targets = inputs.to(device), targets.to(device)
+
+                preds = self.network(inputs)
+                preds = preds.squeeze(dim=1)
+
+                true_preds += 1 if abs(preds - targets) < 0.05 else 0
+                num_preds += 1  # targets.shape[0]
+
+        avg_acc = true_preds / num_preds
+        print(f"Accuracy of the model: {avg_acc * 100:.2f}%")
 
     @classmethod
     def selection(self, net_pop, set_k):
