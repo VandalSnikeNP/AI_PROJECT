@@ -99,6 +99,7 @@ class Individual(object):
             loss_values_custom.append(loss.item())
             loss.backward()
             optimizer.step()
+            print(f"Epoch {epoch + 1}/{epochs}, Training Loss: {loss.item():.4f}")
 
             if early_stopping == True:
                 if loss.item() < best_loss:
@@ -108,7 +109,7 @@ class Individual(object):
                     epochs_no_improve += 1
 
                 if epochs_no_improve >= patience:
-                    # print(f"Early stopping at epoch {epoch} due to no improvement.")
+                    print(f"Early stopping at epoch {epoch} due to no improvement.")
                     break
 
         self.score = loss_values_custom[-1]
