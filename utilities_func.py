@@ -7,6 +7,31 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from scipy.interpolate import interp1d
 import pickle
 import math
+from torch.utils.data import DataLoader, TensorDataset
+from sklearn.model_selection import train_test_split
+import torch
+
+def dataset(pars,test_size=0.2,batch_size=10):
+    X=np.linspace(pars['lim_inf'],pars['lim_sup'],pars['step_domain']).reshape(-1,1)
+    Y=np.sin(X)
+    X_tensor = torch.tensor(X,dtype=torch.float32)
+    Y_tensor = torch.tensor(Y,dtype=torch.float32)
+    X_train, X_val, Y_train, Y_val = train_test_split(X_tensor, Y_tensor, test_size=test_size, random_state=pars['seed'])
+    train_data = TensorDataset(X_train, Y_train)
+    val_data = TensorDataset(X_val, Y_val)
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+    return X_train, X_val, Y_train, Y_val,train_loader, val_loader
+
+def data_computing(net_pop,Mean_sim,Min_sim,scores_sim):
+ scores = [individual.score for individual in net_pop]
+ mean_score=sum(individual.score for individual in net_pop) / len(net_pop)
+ min_score=min(net_pop,key=lambda x: x.score).score
+ Mean_sim.append(round(mean_score, 9))
+ Min_sim.append(round(min_score, 9))
+ scores_sim.append(scores)
+ return Mean_sim,Min_sim,scores
+
 def print_par(index, pop):
     for name, param in pop[index].network.named_parameters():
         print(f'Ind:{index},{name}: {np.round(np.array(param.data), 3).reshape(1, -1)}')
@@ -100,8 +125,6 @@ def save_data(formatted_time, net_data, pars):
 
     print("Data saved in Results/")
 
-
-
 def save_parameters(formatted_time, net_data, pars):
     with open('Results/' + formatted_time + '_Population_parameters.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -141,17 +164,35 @@ def load_data(file_name_loading):
         pars = pickle.load(f)
     return net_data,pars
 
-def update_plots_save(frame, Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax2, ax3):
+
+def create_animation(Mean_sim, Min_sim, scores_sim, net_data, pars, N_gens, filename='simulation_animation.gif',
+                     fps=10):
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(24, 5))
+    anim = FuncAnimation(
+        fig,
+        update_plots_save,
+        frames=N_gens,
+        fargs=(Mean_sim, Min_sim, scores_sim, net_data, pars, fig, ax1, ax2, ax3, ax4),
+        repeat=False
+    )
+    anim.save(filename, writer=PillowWriter(fps=fps))
+    plt.close(fig)
+    return anim
+
+
+def update_plots_save(i, Mean_sim, Min_sim, scores_sim, net_data, pars, fig, ax1, ax2, ax3, ax4):
     ax1.cla()
     ax2.cla()
     ax3.cla()
+    ax4.cla()
 
-    mean_sim = Mean_sim[:frame + 1]
-    min_sim = Min_sim[:frame + 1]
-    scores = scores_sim[frame]
+    mean_sim = Mean_sim[:i + 1]
+    min_sim = Min_sim[:i + 1]
+    scores = scores_sim[i]
 
-    fig.suptitle(f'Generation {frame + 1}/{N_gens}', fontsize=16)
+    fig.suptitle(f'Generation {i + 1}({i})/{pars["N_gens"]}', fontsize=16)
 
+    # Figura 1: Mean Simulation Trend
     ax1.plot(mean_sim, marker='.')
     ax1.set_xlabel('Generation')
     ax1.set_ylabel('Mean Score')
@@ -165,6 +206,7 @@ def update_plots_save(frame, Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax
         mean_legend_text = 'No data'
     ax1.legend([mean_legend_text], loc='upper right')
 
+    # Figura 2: Min Simulation Trend
     ax2.plot(min_sim, marker='.', color='red')
     ax2.set_xlabel('Generation')
     ax2.set_ylabel('Min Score')
@@ -178,20 +220,35 @@ def update_plots_save(frame, Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax
         min_legend_text = 'No data'
     ax2.legend([min_legend_text], loc='upper right')
 
-    ax3.hist(scores, bins=10, color='skyblue', edgecolor='black')
-    ax3.set_xlabel('Score')
-    ax3.set_ylabel('Frequency')
-    ax3.set_title('Score Distribution in Current Generation')
-    mean_score = np.mean(scores)
-    ax3.axvline(mean_score, color='orange', linestyle='dashed', linewidth=1.5, label=f'Mean: {round(mean_score, 2)}')
-    ax3.legend(loc='upper right')
+    # Figura 3: Score Distribution
+    if i < len(scores_sim):
+        ax3.hist(scores, bins=10, color='skyblue', edgecolor='black')
+        ax3.set_xlabel('Score')
+        ax3.set_ylabel('Frequency')
+        ax3.set_title('Score Distribution in Current Generation')
+        mean_score = np.mean(scores)
+        ax3.axvline(mean_score, color='orange', linestyle='dashed', linewidth=1.5,
+                    label=f'Mean: {round(mean_score, 2)}')
+        ax3.legend(loc='upper right')
 
-def create_animation(Mean_sim, Min_sim, scores_sim, N_gens, filename='simulation_animation.gif', fps=10):
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
-    anim = FuncAnimation(fig, update_plots_save, frames=N_gens, fargs=(Mean_sim, Min_sim, scores_sim, N_gens, fig, ax1, ax2, ax3), repeat=False)
-    anim.save(filename, writer=PillowWriter(fps=fps))
-    plt.close(fig)
-    return anim
+    # Figura 4: Network Activation Functions
+    x_doms = np.linspace(pars['lim_inf'], pars['lim_sup'], pars['step_domain'])
+    if i < len(net_data):
+        net_act_test_1 = act_func_generator(min(net_data[i], key=lambda x: x.score).genome, pars['lim_inf'],
+                                            pars['lim_sup'])
+        y_doms_1 = net_act_test_1(x_doms)
+        ax4.plot(x_doms, y_doms_1, label=f'Generation {i}', color='green')
+
+        if i > 0:
+            net_act_test_2 = act_func_generator(min(net_data[i - 1], key=lambda x: x.score).genome, pars['lim_inf'],
+                                                pars['lim_sup'])
+            y_doms_2 = net_act_test_2(x_doms)
+            ax4.plot(x_doms, y_doms_2, label=f'Generation {i - 1}', color='red', linestyle='--')
+
+        ax4.set_xlabel('Domain')
+        ax4.set_ylabel('Activation')
+        ax4.set_title('Network Activation Function')
+        ax4.legend(loc='upper right')
 
 #Function to pass from DNA to activation function
 def act_func_generator(DNA,dom_min,dom_max):
@@ -199,11 +256,12 @@ def act_func_generator(DNA,dom_min,dom_max):
     function=interp1d(x_dom,DNA,kind='cubic', fill_value="extrapolate")
     return function
 
-def plot_some_activation_function(pars, net_pop,formatted_time,net_data):
+
+def plot_some_activation_function(pars, net_pop, formatted_time, num_funcs=10):
     x_doms = np.linspace(pars['lim_inf'], pars['lim_sup'], pars['step_domain'])
 
     net_pop.sort(key=lambda x: x.score)
-    selected = net_pop[:10]
+    selected = net_pop[:num_funcs]
 
     cols = 5
     rows = math.ceil(len(selected) / cols)
@@ -222,7 +280,7 @@ def plot_some_activation_function(pars, net_pop,formatted_time,net_data):
         axs[row, col].set_title(f"Individual {i + 1}")
         axs[row, col].set_xlabel("x")
         axs[row, col].set_ylabel("y")
-        min_score = min(net_data[-1], key=lambda x: x.score).score
+        min_score = min(net_pop, key=lambda x: x.score).score
         score_text = f"Score: {round(net_pop[i].score, 9)}"
         if net_pop[i].score == min_score:
             axs[row, col].text(0.5, -0.3, score_text, ha='center', va='top', transform=axs[row, col].transAxes,
@@ -252,3 +310,4 @@ def plot_some_activation_function(pars, net_pop,formatted_time,net_data):
 # Min_sim=[round(min(net_pop,key=lambda x: x.score).score,9) for net_pop in net_data]
 
 #scores_sim = [[individual.score for individual in netp] for netp in net_data]
+#display(f'Trained {i} and created pop {i+1} of : {len(new_pop)} individuals in {round(end_time - start_time,2)} seconds')
