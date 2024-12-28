@@ -164,7 +164,6 @@ def load_data(file_name_loading):
         pars = pickle.load(f)
     return net_data,pars
 
-
 def create_animation(Mean_sim, Min_sim, scores_sim, net_data, pars, N_gens, filename='simulation_animation.gif',
                      fps=10):
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(24, 5))
@@ -178,7 +177,6 @@ def create_animation(Mean_sim, Min_sim, scores_sim, net_data, pars, N_gens, file
     anim.save(filename, writer=PillowWriter(fps=fps))
     plt.close(fig)
     return anim
-
 
 def update_plots_save(i, Mean_sim, Min_sim, scores_sim, net_data, pars, fig, ax1, ax2, ax3, ax4):
     ax1.cla()

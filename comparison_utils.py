@@ -1,11 +1,8 @@
-from torch.utils.data import DataLoader, TensorDataset
-from Genetic_utils import *
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from sklearn.metrics import mean_squared_error
-from MLP_Custom_Class import *
 from Individual_class import *
-
+from utilities_func import *
+from MLP_Custom_Class import *
 
 def training(model, train_loader, lr=0.001, epochs=1000, patience=20, early_stopping=True, device='cpu'):
     model.to(device)
@@ -60,7 +57,6 @@ def validate(model, validation_loader, device='cpu'):
 
     final_mse = mean_squared_error(all_targets, all_outputs)
     print(f'Validation MSE: {final_mse:.4f}')
-
 
 def plot_training_loss(training_loss1, training_loss2, separetely=True):
     plt.figure(figsize=(10, 5))
@@ -117,7 +113,6 @@ def plot_model_comparisons(X_tensor, Y_tensor, model, net_test, point_size=2):
     plt.tight_layout()
     plt.show()
 
-
 class MLP_sigmoid(nn.Module):
     def __init__(self, input_size, hidden_size, output_size, pars_W,dict):
         self.seed=dict['seed']
@@ -150,7 +145,6 @@ class MLP_sigmoid(nn.Module):
         with torch.no_grad():
             for param, p in zip(self.parameters(), pars_W):
                 param.copy_(torch.tensor(p))
-
 
 def load_best_net(string_file,dict):
     net_data, pars = load_data(string_file)
