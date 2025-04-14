@@ -56,7 +56,7 @@ def validate(model, validation_loader, device='cpu'):
             all_outputs.extend(outputs.cpu().numpy())
 
     final_mse = mean_squared_error(all_targets, all_outputs)
-    print(f'Validation MSE: {final_mse:.4f}')
+    print(f'Validation MSE: {final_mse:.9f}')
 
 def plot_training_loss(training_loss1, training_loss2, separetely=True):
     plt.figure(figsize=(10, 5))
